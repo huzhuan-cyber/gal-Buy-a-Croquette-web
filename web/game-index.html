@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <meta name="viewport" content="user-scalable=no">
+        <link rel="icon" href="icon/icon.png" type="image/png">
+        <link rel="apple-touch-icon" href="icon/icon.png">
+        <link rel="stylesheet" type="text/css" href="fonts/gamefont.css">
+        <title>买个可乐饼吧！</title>
+        <style>
+            #audio-unlock-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+                z-index: 99999;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                text-align: center;
+                padding: 20px;
+            }
+            #audio-unlock-overlay.hidden {
+                display: none !important;
+                pointer-events: none;
+            }
+            #audio-unlock-overlay h1 {
+                font-size: 24px;
+                margin-bottom: 20px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+            }
+            #audio-unlock-overlay p {
+                font-size: 14px;
+                color: #888;
+                margin-bottom: 30px;
+                line-height: 1.6;
+            }
+            #audio-unlock-btn {
+                padding: 20px 40px;
+                font-size: 18px;
+                font-weight: bold;
+                color: white;
+                background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+                border: none;
+                border-radius: 50px;
+                cursor: pointer;
+                animation: pulse 2s infinite;
+                -webkit-tap-highlight-color: transparent;
+            }
+            #audio-unlock-btn:active {
+                transform: scale(0.95);
+            }
+            @keyframes pulse {
+                0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.7); }
+                50% { transform: scale(1.02); box-shadow: 0 0 0 10px rgba(255, 107, 107, 0); }
+            }
+        </style>
+
+        <script>
+            window.require = function(module) {
+                if (module === 'fs') {
+                    return {
+                        existsSync: function() { return false; },
+                        readFileSync: function() { return null; },
+                        writeFileSync: function() { },
+                        mkdirSync: function() { },
+                        unlinkSync: function() { }
+                    };
+                }
+                if (module === 'path') {
+                    return {
+                        join: function() { return arguments[arguments.length - 1] || ''; },
+                        dirname: function(p) { return p; },
+                        basename: function(p) { return p; }
+                    };
+                }
+                if (module === 'nw.gui') {
+                    return {
+                        Window: { get: function() { return { showDevTools: function() {}, isDevToolsOpen: function() { return true; }, focus: function() {} }; } },
+                        App: { argv: [] },
+                        Menu: function() { return { createMacBuiltin: function() {} }; }
+                    };
+                }
+                if (module === 'child_process') {
+                    return { exec: function() {} };
+                }
+                return {};
+            };
+            window.process = {
+                platform: 'browser',
+                versions: {},
+                cwd: function() { return '/'; },
+                env: {},
+                mainModule: { filename: '/www/index.html' }
+            };
+            window.nw = {
+                App: { argv: [] },
+                Window: { get: function() { return { showDevTools: function() {} }; } }
+            };
+        </script>
+    </head>
+    <body style="background-color: black">
+        <!-- 音频解锁遮罩层 -->
+        <div id="audio-unlock-overlay">
+            <h1>🎮 买个可乐饼吧！</h1>
+            <p>点击按钮开始游戏<br>（移动设备需要此步骤播放声音）</p>
+            <button id="audio-unlock-btn">点击开始游戏</button>
+        </div>
+
+        <script>
+            (function() {
+                var overlay = document.getElementById('audio-unlock-overlay');
+                var btn = document.getElementById('audio-unlock-btn');
+                
+                btn.addEventListener('click', startGame);
+                btn.addEventListener('touchstart', function(e) {
+                    e.preventDefault();
+                    startGame();
+                });
+                
+                function startGame() {
+                    // 先解锁音频（必须在用户手势内）
+                    unlockAudio();
+                    
+                    // 隐藏遮罩
+                    overlay.classList.add('hidden');
+                }
+                
+                function unlockAudio() {
+                    try {
+                        var AudioContext = window.AudioContext || window.webkitAudioContext;
+                        if (AudioContext) {
+                            // 创建一个新的 AudioContext 并播放一次来解锁
+                            var ctx = new AudioContext();
+                            var buffer = ctx.createBuffer(1, 1, ctx.sampleRate);
+                            var source = ctx.createBufferSource();
+                            var gain = ctx.createGain();
+                            source.buffer = buffer;
+                            gain.gain.value = 0.001;
+                            source.connect(gain);
+                            gain.connect(ctx.destination);
+                            source.start(0);
+                            
+                            // 保存到全局，让 WebAudio 能复用
+                            window.__unlockAudioContext = ctx;
+                            console.log('[Audio] Unlocked in user gesture, context state:', ctx.state);
+                        }
+                    } catch (e) {
+                        console.error('[Audio Unlock] Failed:', e);
+                    }
+                }
+            })();
+        </script>
+
+        <script type="text/javascript" src="js/libs/pixi.js"></script>
+        <script type="text/javascript" src="js/libs/pixi-tilemap.js"></script>
+        <script type="text/javascript" src="js/libs/pixi-picture.js"></script>
+        <script type="text/javascript" src="js/libs/fpsmeter.js"></script>
+        <script type="text/javascript" src="js/libs/lz-string.js"></script>
+        <script type="text/javascript" src="js/libs/iphone-inline-video.browser.js"></script>
+        <script type="text/javascript" src="js/rpg_core.js"></script>
+        <script type="text/javascript" src="js/rpg_managers.js"></script>
+        <script type="text/javascript" src="js/rpg_objects.js"></script>
+        <script type="text/javascript" src="js/rpg_scenes.js"></script>
+        <script type="text/javascript" src="js/rpg_sprites.js"></script>
+        <script type="text/javascript" src="js/rpg_windows.js"></script>
+        <script type="text/javascript" src="js/plugins.js"></script>
+        <script type="text/javascript" src="js/main.js"></script>
+    </body>
+</html>
