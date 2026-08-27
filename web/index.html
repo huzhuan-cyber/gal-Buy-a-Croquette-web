@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+        <link rel="icon" href="icon/icon.png" type="image/png">
+        <link rel="apple-touch-icon" href="icon/icon.png">
+        <link rel="stylesheet" type="text/css" href="fonts/gamefont.css">
+        <link rel="manifest" href="manifest.json">
+        <title>买个可乐饼吧！</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+            
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                background-color: #0a0a1a;
+            }
+            
+            #guide-page {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%);
+                z-index: 99999;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                text-align: center;
+                padding: 30px;
+                overflow-y: auto;
+            }
+            
+            #guide-page.hidden {
+                display: none !important;
+            }
+            
+            #guide-page .container {
+                max-width: 500px;
+                width: 100%;
+            }
+            
+            #guide-page h1 {
+                font-size: clamp(28px, 7vw, 42px);
+                margin-bottom: 12px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
+            }
+            
+            #guide-page .subtitle {
+                font-size: clamp(14px, 4vw, 18px);
+                color: #666;
+                margin-bottom: 25px;
+            }
+            
+            #guide-page .notice-box {
+                background: rgba(255, 200, 100, 0.12);
+                border: 1px solid rgba(255, 200, 100, 0.35);
+                border-radius: 12px;
+                padding: 15px 20px;
+                margin-bottom: 15px;
+                font-size: clamp(14px, 3.5vw, 16px);
+                line-height: 1.7;
+                color: #e0b860;
+            }
+            
+            #guide-page .notice-box strong {
+                color: #ffd666;
+            }
+            
+            #guide-page .save-tip {
+                background: rgba(100, 150, 255, 0.1);
+                border: 1px solid rgba(100, 150, 255, 0.25);
+                border-radius: 12px;
+                padding: 12px 18px;
+                margin-bottom: 30px;
+                font-size: clamp(13px, 3vw, 15px);
+                line-height: 1.6;
+                color: #8ab4f8;
+            }
+            
+            #guide-page .desc {
+                font-size: clamp(14px, 3.5vw, 17px);
+                color: #999;
+                margin-bottom: 25px;
+                line-height: 1.6;
+            }
+            
+            #start-btn {
+                padding: 20px 50px;
+                font-size: clamp(18px, 5vw, 24px);
+                font-weight: bold;
+                color: white;
+                background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+                border: none;
+                border-radius: 60px;
+                cursor: pointer;
+                animation: pulse 2s infinite;
+                -webkit-tap-highlight-color: transparent;
+                box-shadow: 0 6px 25px rgba(255, 107, 107, 0.35);
+                transition: transform 0.2s;
+            }
+            
+            #start-btn:active {
+                transform: scale(0.96);
+            }
+            
+            #start-btn:disabled {
+                background: linear-gradient(135deg, #555 0%, #333 100%);
+                cursor: not-allowed;
+                animation: none;
+                box-shadow: none;
+            }
+            
+            @keyframes pulse {
+                0%, 100% { transform: scale(1); box-shadow: 0 6px 25px rgba(255, 107, 107, 0.35); }
+                50% { transform: scale(1.02); box-shadow: 0 8px 35px rgba(255, 107, 107, 0.45); }
+            }
+            
+            #loading-status {
+                margin-top: 20px;
+                font-size: clamp(14px, 3vw, 16px);
+                color: #888;
+                display: none;
+            }
+            
+            #loading-status.show {
+                display: block;
+            }
+            
+            #progress-bar {
+                width: 100%;
+                max-width: 280px;
+                height: 6px;
+                background: rgba(255, 255, 255, 0.1);
+                border-radius: 3px;
+                margin-top: 12px;
+                overflow: hidden;
+                display: none;
+            }
+            
+            #progress-bar.show {
+                display: block;
+            }
+            
+            #progress-fill {
+                height: 100%;
+                width: 0%;
+                background: linear-gradient(90deg, #667eea, #764ba2);
+                border-radius: 3px;
+                transition: width 0.3s;
+            }
+            
+            /* 流量警告遮罩 */
+            #warning-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.6);
+                z-index: 99998;
+                display: none;
+            }
+            
+            #warning-overlay.show {
+                display: block;
+            }
+            
+            /* 流量警告弹窗 */
+            #network-warning {
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: linear-gradient(135deg, #1e1e3a 0%, #252550 100%);
+                border: 1px solid rgba(255, 200, 100, 0.4);
+                border-radius: 16px;
+                padding: 22px 25px;
+                max-width: 300px;
+                width: 88%;
+                z-index: 100000;
+                display: none;
+                flex-direction: column;
+                align-items: center;
+                color: white;
+                text-align: center;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+            }
+            
+            #network-warning.show {
+                display: flex;
+            }
+            
+            #network-warning .warning-icon {
+                font-size: 36px;
+                margin-bottom: 8px;
+            }
+            
+            #network-warning h3 {
+                font-size: clamp(15px, 4vw, 18px);
+                margin-bottom: 8px;
+                color: #ffd666;
+                font-weight: 600;
+            }
+            
+            #network-warning p {
+                font-size: clamp(13px, 3vw, 14px);
+                color: #999;
+                margin-bottom: 18px;
+                line-height: 1.5;
+            }
+            
+            #network-warning .btn-group {
+                display: flex;
+                gap: 10px;
+                justify-content: center;
+            }
+            
+            #network-warning button {
+                padding: 10px 22px;
+                font-size: clamp(14px, 3.5vw, 15px);
+                font-weight: 600;
+                border: none;
+                border-radius: 50px;
+                cursor: pointer;
+                -webkit-tap-highlight-color: transparent;
+            }
+            
+            #network-warning .btn-cancel {
+                background: #3a3a5a;
+                color: #aaa;
+            }
+            
+            #network-warning .btn-continue {
+                background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+                color: #fff;
+            }
+            
+            /* iOS横屏提示 - 仅iOS生效 */
+            #ios-rotate-hint {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.95);
+                z-index: 99997;
+                display: none;
+                justify-content: center;
+                align-items: center;
+                flex-direction: column;
+                color: white;
+                text-align: center;
+            }
+            
+            #ios-rotate-hint.show {
+                display: flex;
+            }
+            
+            #ios-rotate-hint .rotate-icon {
+                font-size: 80px;
+                margin-bottom: 20px;
+                animation: rotatePhone 2s ease-in-out infinite;
+            }
+            
+            @keyframes rotatePhone {
+                0%, 100% { transform: rotate(0deg); }
+                50% { transform: rotate(90deg); }
+            }
+            
+            #ios-rotate-hint .hint-text {
+                font-size: clamp(16px, 4vw, 20px);
+                margin-bottom: 15px;
+                color: #ffd666;
+            }
+            
+            #ios-rotate-hint .hint-subtext {
+                font-size: clamp(12px, 3vw, 14px);
+                color: #888;
+            }
+            
+            #ios-rotate-hint .continue-btn {
+                margin-top: 25px;
+                padding: 12px 30px;
+                font-size: clamp(14px, 3.5vw, 16px);
+                font-weight: 600;
+                background: rgba(255, 255, 255, 0.15);
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                border-radius: 50px;
+                color: white;
+                cursor: pointer;
+                -webkit-tap-highlight-color: transparent;
+            }
+
+            /* 版本更新提示 */
+            #update-notification {
+                position: fixed;
+                top: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                border-radius: 12px;
+                padding: 12px 20px;
+                color: white;
+                font-size: 14px;
+                z-index: 100001;
+                display: none;
+                align-items: center;
+                gap: 10px;
+                box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+                animation: slideDown 0.3s ease;
+            }
+
+            #update-notification.show {
+                display: flex;
+            }
+
+            @keyframes slideDown {
+                from { top: -50px; opacity: 0; }
+                to { top: 20px; opacity: 1; }
+            }
+
+            #update-notification .update-btn {
+                padding: 8px 16px;
+                background: white;
+                color: #667eea;
+                border: none;
+                border-radius: 20px;
+                font-weight: 600;
+                cursor: pointer;
+                font-size: 13px;
+            }
+
+            #update-notification .update-btn:hover {
+                background: #f0f0f0;
+            }
+
+            #update-notification .close-btn {
+                background: transparent;
+                border: none;
+                color: white;
+                cursor: pointer;
+                font-size: 18px;
+                padding: 0 5px;
+            }
+
+            /* 存档管理按钮 */
+            #save-management {
+                margin-top: 15px;
+                display: flex;
+                gap: 8px;
+                justify-content: center;
+            }
+
+            #save-management button {
+                padding: 10px 18px;
+                font-size: clamp(12px, 3vw, 14px);
+                font-weight: 600;
+                border: none;
+                border-radius: 20px;
+                cursor: pointer;
+                -webkit-tap-highlight-color: transparent;
+            }
+
+            #save-management .export-btn {
+                background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
+                color: white;
+            }
+
+            #save-management .import-btn {
+                background: linear-gradient(135deg, #2196F3 0%, #1565C0 100%);
+                color: white;
+            }
+
+            /* 加载详情 */
+            #loading-detail {
+                margin-top: 8px;
+                font-size: clamp(11px, 2.5vw, 13px);
+                color: #666;
+                display: none;
+            }
+
+            #loading-detail.show {
+                display: block;
+            }
+
+            /* 离线状态指示 */
+            #offline-indicator {
+                position: fixed;
+                bottom: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: #ff6b6b;
+                color: white;
+                padding: 8px 16px;
+                border-radius: 20px;
+                font-size: 12px;
+                z-index: 100000;
+                display: none;
+            }
+
+            #offline-indicator.show {
+                display: block;
+            }
+        </style>
+
+        <!-- 只加载必要的polyfill，不加载游戏脚本 -->
+        <script>
+            window.require = function(module) {
+                if (module === 'fs') return { existsSync: function() { return false; }, readFileSync: function() { return null; }, writeFileSync: function() { }, mkdirSync: function() { }, unlinkSync: function() { } };
+                if (module === 'path') return { join: function() { return arguments[arguments.length - 1] || ''; }, dirname: function(p) { return p; }, basename: function(p) { return p; } };
+                if (module === 'nw.gui') return { Window: { get: function() { return { showDevTools: function() {}, isDevToolsOpen: function() { return true; }, focus: function() {} }; } }, App: { argv: [] }, Menu: function() { return { createMacBuiltin: function() {} }; } };
+                if (module === 'child_process') return { exec: function() {} };
+                return {};
+            };
+            window.process = { platform: 'browser', versions: {}, cwd: function() { return '/'; }, env: {}, mainModule: { filename: '/www/index.html' } };
+            window.nw = { App: { argv: [] }, Window: { get: function() { return { showDevTools: function() {} }; } } };
+            
+            // iOS检测
+            function isIOS() {
+                return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+            }
+            
+            // iOS横屏检测
+            function checkIOSOrientation() {
+                if (!isIOS()) return;
+                var hint = document.getElementById('ios-rotate-hint');
+                if (!hint) return;
+                var isPortrait = window.innerWidth < window.innerHeight;
+                var guideHidden = document.getElementById('guide-page').classList.contains('hidden');
+                if (isPortrait && guideHidden) {
+                    hint.classList.add('show');
+                } else {
+                    hint.classList.remove('show');
+                }
+            }
+            
+            // 游戏脚本列表（按依赖顺序）
+            var GAME_SCRIPTS = [
+                'js/libs/pixi.js',
+                'js/libs/pixi-tilemap.js',
+                'js/libs/pixi-picture.js',
+                'js/libs/fpsmeter.js',
+                'js/libs/lz-string.js',
+                'js/libs/iphone-inline-video.browser.js',
+                'js/rpg_core.js',
+                'js/rpg_managers.js',
+                'js/rpg_objects.js',
+                'js/rpg_scenes.js',
+                'js/rpg_sprites.js',
+                'js/rpg_windows.js',
+                'js/plugins.js',
+                'js/main.js'
+            ];
+            
+            // 脚本加载状态
+            var scriptsLoaded = false;
+            
+            // 检测是否为WiFi连接（Safari 不支持 connection.type，用 effectiveType 兜底）
+            function isWifiConnection() {
+                var conn = navigator.connection;
+                if (conn) {
+                    if (conn.type === 'cellular') return false;
+                    if (conn.type === 'wifi') return true;
+                    if (conn.effectiveType === 'slow-2g' || conn.effectiveType === '3g') return false;
+                }
+                return true;
+            }
+
+            // 后台预缓存游戏数据文件（进游戏必需、量小），二次进入明显变快；不阻塞游戏
+            function preCacheGameData() {
+                if (!('caches' in window)) return;
+                var dataFiles = [
+                    'data/System.json', 'data/MapInfos.json', 'data/Actors.json',
+                    'data/Classes.json', 'data/Skills.json', 'data/Items.json',
+                    'data/Weapons.json', 'data/Armors.json', 'data/Enemies.json',
+                    'data/Troops.json', 'data/States.json', 'data/CommonEvents.json'
+                ];
+                dataFiles.forEach(function(f) {
+                    fetch(f).catch(function() {});
+                });
+            }
+            
+            // 检查网络并开始加载
+            function checkNetworkAndStart() {
+                if (!isWifiConnection()) {
+                    document.getElementById('warning-overlay').classList.add('show');
+                    document.getElementById('network-warning').classList.add('show');
+                    return;
+                }
+                startGameLoading();
+            }
+            
+            // 继续加载（用户确认使用移动网络）
+            function continueWithMobileData() {
+                document.getElementById('warning-overlay').classList.remove('show');
+                document.getElementById('network-warning').classList.remove('show');
+                startGameLoading();
+            }
+            
+            // 取消加载
+            function cancelLoading() {
+                document.getElementById('warning-overlay').classList.remove('show');
+                document.getElementById('network-warning').classList.remove('show');
+            }
+            
+            // 解锁音频
+            function unlockAudio() {
+                try {
+                    var AC = window.AudioContext || window.webkitAudioContext;
+                    if (AC) {
+                        var ctx = new AC();
+                        var buffer = ctx.createBuffer(1, 1, ctx.sampleRate);
+                        var source = ctx.createBufferSource();
+                        source.buffer = buffer;
+                        source.connect(ctx.destination);
+                        source.start(0);
+                        window.__preUnlockedAudioContext = ctx;
+                        console.log('[Audio] AudioContext unlocked, state:', ctx.state);
+                    }
+                } catch (e) {
+                    console.error('[Audio] Failed to unlock AudioContext:', e);
+                }
+            }
+            
+            // 串行加载脚本
+            function loadScriptsSequentially(scripts, onProgress, onComplete, onError) {
+                var index = 0;
+                var total = scripts.length;
+                
+                function loadNext() {
+                    if (index >= total) {
+                        onComplete();
+                        return;
+                    }
+                    
+                    var script = document.createElement('script');
+                    script.src = scripts[index];
+                    script.async = false;
+                    
+                    script.onload = function() {
+                        index++;
+                        onProgress(index, total);
+                        loadNext();
+                    };
+                    
+                    script.onerror = function() {
+                        onError(scripts[index]);
+                    };
+                    
+                    document.body.appendChild(script);
+                }
+                
+                loadNext();
+            }
+            
+            // 开始加载游戏
+            function startGameLoading() {
+                var startBtn = document.getElementById('start-btn');
+                var loadingStatus = document.getElementById('loading-status');
+                var progressBar = document.getElementById('progress-bar');
+                var progressFill = document.getElementById('progress-fill');
+                
+                startBtn.disabled = true;
+                startBtn.textContent = '加载中...';
+                loadingStatus.classList.add('show');
+                loadingStatus.textContent = '正在初始化...';
+                progressBar.classList.add('show');
+                
+                unlockAudio();
+                
+                loadingStatus.textContent = '加载游戏引擎...';
+                
+                loadScriptsSequentially(
+                    GAME_SCRIPTS,
+                    function(loaded, total) {
+                        var percent = Math.round((loaded / total) * 100);
+                        progressFill.style.width = percent + '%';
+                        var currentScript = GAME_SCRIPTS[loaded - 1] || '';
+                        var scriptName = currentScript.split('/').pop();
+                        loadingStatus.textContent = '加载中 ' + percent + '% (' + loaded + '/' + total + ')';
+                        var detailEl = document.getElementById('loading-detail');
+                        if (detailEl) {
+                            detailEl.classList.add('show');
+                            detailEl.textContent = '正在加载: ' + scriptName;
+                        }
+                    },
+                    function() {
+                        loadingStatus.textContent = '启动游戏...';
+                        progressFill.style.width = '100%';
+                        scriptsLoaded = true;
+                        
+                        setTimeout(function() {
+                            if (typeof SceneManager !== 'undefined' && typeof Scene_Boot !== 'undefined') {
+                                try {
+                                    SceneManager.run(Scene_Boot);
+                                } catch (e) {
+                                    console.error('Failed to start game:', e);
+                                }
+                            }
+                            
+                            if (typeof WebAudio !== 'undefined' && WebAudio._context) {
+                                WebAudio._onTouchStart();
+                            }
+                            
+                            setTimeout(function() {
+                                document.getElementById('guide-page').classList.add('hidden');
+                                // 启动iOS横屏检测
+                                checkIOSOrientation();
+                            }, 400);
+
+                            // 后台预缓存数据文件（不阻塞游戏，提升二次加载速度）
+                            setTimeout(preCacheGameData, 0);
+                        }, 100);
+                    },
+                    function(failedScript) {
+                        loadingStatus.textContent = '加载失败，请重试';
+                        loadingStatus.style.color = '#ff6b6b';
+                        startBtn.disabled = false;
+                        startBtn.textContent = '🎮 重新加载';
+                    }
+                );
+            }
+        </script>
+    </head>
+    <body style="background-color: black">
+        <!-- 引导页面 -->
+        <div id="guide-page">
+            <div class="container">
+                <h1>🎮 买个可乐饼吧！</h1>
+                <p class="subtitle">网页版</p>
+                <div class="notice-box">
+                    <strong>⚠️ 流量提醒</strong><br>
+                    首次游玩需下载约350MB资源（游戏过程中自动缓存，进度条仅显示引擎加载），建议WiFi环境
+                </div>
+                <div class="save-tip">
+                    💡 重要提示：更换浏览器、清除缓存或开启无痕模式会重新加载游戏并且丢失存档
+                </div>
+                <div class="save-tip" id="ios-cache-tip" style="display:none">
+                    📱 iOS 提示：Safari 离线缓存容量有限，离线功能可能不完整，建议在 WiFi 环境游玩
+                </div>
+                <p class="desc">点击按钮开始游戏，首次加载请耐心等待</p>
+                <button id="start-btn" onclick="checkNetworkAndStart()">🎮 开始游戏</button>
+                
+                <p id="loading-status">准备中...</p>
+                <p id="loading-detail"></p>
+                <div id="progress-bar">
+                    <div id="progress-fill"></div>
+                </div>
+
+                <!-- 存档管理按钮 -->
+                <div id="save-management">
+                    <button class="export-btn" onclick="exportSaveData()">📤 导出存档</button>
+                    <button class="import-btn" onclick="importSaveData()">📥 导入存档</button>
+                    <input type="file" id="save-file-input" accept=".json" style="display:none" onchange="handleSaveFile(event)">
+                </div>
+            </div>
+        </div>
+        
+        <!-- 警告遮罩 -->
+        <div id="warning-overlay"></div>
+        
+        <!-- 流量警告弹窗 -->
+        <div id="network-warning">
+            <div class="warning-icon">📶</div>
+            <h3>未连接 WiFi</h3>
+            <p>当前可能使用移动数据<br>游戏约 350MB</p>
+            <div class="btn-group">
+                <button class="btn-cancel" onclick="cancelLoading()">取消</button>
+                <button class="btn-continue" onclick="continueWithMobileData()">继续</button>
+            </div>
+        </div>
+        
+        <!-- iOS横屏提示 - 仅iOS显示 -->
+        <div id="ios-rotate-hint">
+            <div class="rotate-icon">📱↻</div>
+            <div class="hint-text">请横屏游玩以获得最佳体验</div>
+            <div class="hint-subtext">横屏时游戏操作更流畅</div>
+            <button class="continue-btn" onclick="document.getElementById('ios-rotate-hint').classList.remove('show')">继续竖屏游玩</button>
+        </div>
+        
+        <!-- 游戏Canvas将由RPG Maker自动创建 -->
+
+        <!-- 版本更新提示 -->
+        <div id="update-notification">
+            <span>🔄 发现新版本</span>
+            <button class="update-btn" onclick="applyUpdate()">立即更新</button>
+            <button class="close-btn" onclick="hideUpdateNotification()">×</button>
+        </div>
+
+        <!-- 离线状态指示 -->
+        <div id="offline-indicator">📴 当前离线，使用缓存版本</div>
+
+        <script>
+            // iOS横屏监听 - 仅iOS生效
+            if (isIOS()) {
+                window.addEventListener('resize', checkIOSOrientation);
+                window.addEventListener('orientationchange', function() {
+                    setTimeout(checkIOSOrientation, 100);
+                });
+                // 显示iOS离线缓存提示
+                var iosTip = document.getElementById('ios-cache-tip');
+                if (iosTip) iosTip.style.display = 'block';
+            }
+
+            //=============================================================================
+            // Service Worker 注册与更新管理
+            //=============================================================================
+            var newSWRegistration = null;
+
+            function registerServiceWorker() {
+                if ('serviceWorker' in navigator) {
+                    navigator.serviceWorker.register('/sw.js')
+                        .then(function(registration) {
+                            console.log('[SW] Registered:', registration.scope);
+
+                            // 检查是否有新版本等待激活
+                            if (registration.waiting) {
+                                newSWRegistration = registration;
+                                showUpdateNotification();
+                            }
+
+                            // 监听新版本安装
+                            registration.addEventListener('updatefound', function() {
+                                var newWorker = registration.installing;
+                                newWorker.addEventListener('statechange', function() {
+                                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                        newSWRegistration = registration;
+                                        showUpdateNotification();
+                                    }
+                                });
+                            });
+                        })
+                        .catch(function(error) {
+                            console.warn('[SW] Registration failed:', error);
+                        });
+
+                    // 监听Service Worker消息
+                    navigator.serviceWorker.addEventListener('message', function(event) {
+                        if (event.data.type === 'SW_UPDATE_AVAILABLE') {
+                            console.log('[SW] Update available:', event.data.version);
+                            showUpdateNotification();
+                        }
+                    });
+                }
+            }
+
+            function showUpdateNotification() {
+                var el = document.getElementById('update-notification');
+                if (el) el.classList.add('show');
+            }
+
+            function hideUpdateNotification() {
+                var el = document.getElementById('update-notification');
+                if (el) el.classList.remove('show');
+            }
+
+            function applyUpdate() {
+                if (newSWRegistration && newSWRegistration.waiting) {
+                    newSWRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
+                    hideUpdateNotification();
+                    window.location.reload();
+                } else {
+                    // 强制刷新
+                    window.location.reload();
+                }
+            }
+
+            //=============================================================================
+            // 离线状态检测
+            //=============================================================================
+            function checkOnlineStatus() {
+                var indicator = document.getElementById('offline-indicator');
+                if (!navigator.onLine) {
+                    if (indicator) indicator.classList.add('show');
+                } else {
+                    if (indicator) indicator.classList.remove('show');
+                }
+            }
+
+            window.addEventListener('online', checkOnlineStatus);
+            window.addEventListener('offline', checkOnlineStatus);
+
+            //=============================================================================
+            // 存档导出/导入功能
+            //=============================================================================
+            function exportSaveData() {
+                try {
+                    var saveData = {};
+
+                    // 导出 LocalStorage 存档 (RPG Maker MV 存档)
+                    for (var i = 0; i < localStorage.length; i++) {
+                        var key = localStorage.key(i);
+                        if (key && key.startsWith('RPG')) {
+                            saveData[key] = localStorage.getItem(key);
+                        }
+                    }
+
+                    // 导出 IndexedDB 存档（如果有）
+                    if (window.indexedDB) {
+                        // RPG Maker MV 通常使用 LocalStorage，但有些插件可能用 IndexedDB
+                    }
+
+                    if (Object.keys(saveData).length === 0) {
+                        alert('没有找到存档数据');
+                        return;
+                    }
+
+                    // 添加元数据
+                    saveData._meta = {
+                        game: '买个可乐饼吧！',
+                        exportTime: new Date().toISOString(),
+                        version: '1.0'
+                    };
+
+                    // 创建下载
+                    var jsonStr = JSON.stringify(saveData, null, 2);
+                    var blob = new Blob([jsonStr], { type: 'application/json' });
+                    var url = URL.createObjectURL(blob);
+
+                    var a = document.createElement('a');
+                    a.href = url;
+                    a.download = '可乐饼存档_' + new Date().toISOString().slice(0,10) + '.json';
+                    a.click();
+
+                    URL.revokeObjectURL(url);
+                    console.log('[Save] Exported successfully');
+                } catch (e) {
+                    console.error('[Save] Export failed:', e);
+                    alert('导出失败: ' + e.message);
+                }
+            }
+
+            function importSaveData() {
+                var input = document.getElementById('save-file-input');
+                if (input) {
+                    input.click();
+                }
+            }
+
+            function handleSaveFile(event) {
+                var file = event.target.files[0];
+                if (!file) return;
+
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        var saveData = JSON.parse(e.target.result);
+
+                        // 验证存档格式
+                        if (!saveData._meta || saveData._meta.game !== '买个可乐饼吧！') {
+                            alert('存档文件格式不正确或不是本游戏的存档');
+                            return;
+                        }
+
+                        // 导入数据到 LocalStorage
+                        var importedCount = 0;
+                        for (var key in saveData) {
+                            if (key !== '_meta' && key.startsWith('RPG')) {
+                                localStorage.setItem(key, saveData[key]);
+                                importedCount++;
+                            }
+                        }
+
+                        console.log('[Save] Imported ' + importedCount + ' items');
+                        alert('存档导入成功！共导入 ' + importedCount + ' 个存档数据。\n请刷新页面后继续游戏。');
+                    } catch (e) {
+                        console.error('[Save] Import failed:', e);
+                        alert('导入失败: ' + e.message);
+                    }
+                };
+                reader.readAsText(file);
+
+                // 清空input，允许再次选择同一文件
+                event.target.value = '';
+            }
+
+            //=============================================================================
+            // 页面加载完成后注册 SW
+            //=============================================================================
+            window.addEventListener('load', function() {
+                registerServiceWorker();
+                checkOnlineStatus();
+            });
+        </script>
+    </body>
+</html>
