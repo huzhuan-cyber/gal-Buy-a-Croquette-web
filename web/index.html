@@ -414,6 +414,99 @@
             #offline-indicator.show {
                 display: block;
             }
+
+            /* 首次下载提示 */
+            #resource-tip {
+                position: fixed;
+                top: 55px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: rgba(0, 0, 0, 0.72);
+                color: #ffd666;
+                padding: 9px 18px;
+                border-radius: 20px;
+                font-size: 13px;
+                z-index: 99990;
+                white-space: nowrap;
+                display: none;
+                pointer-events: none;
+            }
+            #resource-tip.show {
+                display: block;
+                animation: tipFade 6s forwards;
+            }
+            @keyframes tipFade {
+                0% { opacity: 0; }
+                10% { opacity: 1; }
+                75% { opacity: 1; }
+                100% { opacity: 0; }
+            }
+
+            /* 添加到主屏引导 */
+            #install-hint {
+                position: fixed;
+                bottom: 18px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 90%;
+                max-width: 340px;
+                background: linear-gradient(135deg, #1e1e3a 0%, #252550 100%);
+                border: 1px solid rgba(100, 150, 255, 0.35);
+                border-radius: 16px;
+                padding: 16px 20px;
+                z-index: 100001;
+                display: none;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+                text-align: center;
+            }
+            #install-hint.show {
+                display: block;
+            }
+            #install-hint .install-title {
+                display: block;
+                color: white;
+                font-size: 15px;
+                font-weight: bold;
+                margin-bottom: 8px;
+            }
+            #install-hint .install-steps {
+                display: block;
+                color: #9aa3b2;
+                font-size: 13px;
+                line-height: 1.7;
+                margin-bottom: 12px;
+            }
+            #install-hint .install-close {
+                padding: 8px 24px;
+                border: none;
+                border-radius: 20px;
+                background: rgba(102, 126, 234, 0.3);
+                color: white;
+                font-size: 13px;
+                cursor: pointer;
+            }
+            #install-hint .install-close:active {
+                transform: scale(0.96);
+            }
+
+            /* 轻提示 toast */
+            #toast {
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: rgba(0, 0, 0, 0.85);
+                color: white;
+                padding: 12px 26px;
+                border-radius: 12px;
+                font-size: 15px;
+                z-index: 100002;
+                display: none;
+                pointer-events: none;
+            }
+            #toast.show {
+                display: block;
+            }
         </style>
 
         <!-- 只加载必要的polyfill，不加载游戏脚本 -->
@@ -623,6 +716,12 @@
 
                             // 后台预缓存数据文件（不阻塞游戏，提升二次加载速度）
                             setTimeout(preCacheGameData, 0);
+
+                            // 首次游玩资源下载提示 + 添加到主屏引导
+                            setTimeout(function() {
+                                showResourceTip();
+                                initInstallHint();
+                            }, 1500);
                         }, 100);
                     },
                     function(failedScript) {
@@ -692,6 +791,21 @@
         </div>
         
         <!-- 游戏Canvas将由RPG Maker自动创建 -->
+
+        <!-- 首次下载提示（资源按需下载中） -->
+        <div id="resource-tip">首次游玩资源下载中，遇到卡顿属正常现象</div>
+
+        <!-- 添加到主屏引导 -->
+        <div id="install-hint">
+            <div class="install-content">
+                <span class="install-title">📱 添加到主屏，像 App 一样游玩</span>
+                <span class="install-steps">iOS：分享 → 添加到主屏<br>Android：浏览器菜单 → 添加到主屏</span>
+                <button class="install-close" onclick="closeInstallHint()">知道了</button>
+            </div>
+        </div>
+
+        <!-- 轻提示 -->
+        <div id="toast"></div>
 
         <!-- 版本更新提示 -->
         <div id="update-notification">
@@ -794,6 +908,51 @@
             window.addEventListener('offline', checkOnlineStatus);
 
             //=============================================================================
+            // 轻提示 / 首次下载提示 / 安装引导 / 防误退
+            //=============================================================================
+            function showToast(msg) {
+                var t = document.getElementById('toast');
+                if (!t) return;
+                t.textContent = msg;
+                t.classList.add('show');
+                clearTimeout(showToast._t);
+                showToast._t = setTimeout(function() { t.classList.remove('show'); }, 2200);
+            }
+
+            function showResourceTip() {
+                var el = document.getElementById('resource-tip');
+                if (!el) return;
+                el.classList.remove('show');
+                void el.offsetWidth; // 重置动画
+                el.classList.add('show');
+            }
+
+            function initInstallHint() {
+                try {
+                    if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) return;
+                    if (navigator.standalone === true) return; // iOS 已添加到主屏
+                    if (localStorage.getItem('install-hint-closed')) return;
+                    setTimeout(function() {
+                        var el = document.getElementById('install-hint');
+                        if (el) el.classList.add('show');
+                    }, 1500);
+                } catch (e) { }
+            }
+
+            function closeInstallHint() {
+                var el = document.getElementById('install-hint');
+                if (el) el.classList.remove('show');
+                try { localStorage.setItem('install-hint-closed', '1'); } catch (e) { }
+            }
+
+            // 游戏进行中防误退（浏览器后退/关闭/刷新时提示）
+            window.addEventListener('beforeunload', function(e) {
+                if (!scriptsLoaded) return;
+                e.preventDefault();
+                e.returnValue = '游戏进行中，确定离开吗？';
+            });
+
+            //=============================================================================
             // 存档导出/导入功能
             //=============================================================================
             function exportSaveData() {
@@ -836,6 +995,7 @@
                     a.click();
 
                     URL.revokeObjectURL(url);
+                    showToast('存档已导出，请妥善保存该文件');
                     console.log('[Save] Exported successfully');
                 } catch (e) {
                     console.error('[Save] Export failed:', e);
