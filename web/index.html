@@ -102,30 +102,35 @@
                 font-size: clamp(18px, 5vw, 24px);
                 font-weight: bold;
                 color: white;
-                background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                 border: none;
                 border-radius: 60px;
                 cursor: pointer;
                 animation: pulse 2s infinite;
                 -webkit-tap-highlight-color: transparent;
-                box-shadow: 0 6px 25px rgba(255, 107, 107, 0.35);
+                box-shadow: 0 6px 25px rgba(102, 126, 234, 0.35);
                 transition: transform 0.2s;
             }
-            
+
+            #start-btn:hover:not(:disabled) {
+                transform: scale(1.03);
+                box-shadow: 0 8px 30px rgba(102, 126, 234, 0.45);
+            }
+
             #start-btn:active {
                 transform: scale(0.96);
             }
-            
+
             #start-btn:disabled {
                 background: linear-gradient(135deg, #555 0%, #333 100%);
                 cursor: not-allowed;
                 animation: none;
                 box-shadow: none;
             }
-            
+
             @keyframes pulse {
-                0%, 100% { transform: scale(1); box-shadow: 0 6px 25px rgba(255, 107, 107, 0.35); }
-                50% { transform: scale(1.02); box-shadow: 0 8px 35px rgba(255, 107, 107, 0.45); }
+                0%, 100% { transform: scale(1); box-shadow: 0 6px 25px rgba(102, 126, 234, 0.35); }
+                50% { transform: scale(1.02); box-shadow: 0 8px 35px rgba(102, 126, 234, 0.45); }
             }
             
             #loading-status {
@@ -506,6 +511,20 @@
             }
             #toast.show {
                 display: block;
+            }
+
+            /* 小屏适配：按钮加宽便于点击，存档按钮自动换行 */
+            @media (max-width: 480px) {
+                #start-btn {
+                    width: min(280px, 86%);
+                    padding: 18px 30px;
+                }
+                #save-management {
+                    flex-wrap: wrap;
+                }
+                #save-management button {
+                    padding: 10px 14px;
+                }
             }
         </style>
 
